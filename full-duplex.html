@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="从通信、模型、交互与行动四个层次理解全双工语音交互，以及它带来的增量决策问题。" />
+  <title>什么是全双工？从并发传输到增量决策 — Qix · Notes</title>
+  <style>
+    :root { color-scheme: light; --ink:#202522; --muted:#66716c; --line:#e3e8e3; --accent:#39745a; --paper:#fbfcfa; --soft:#f1f5f0; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:17px/1.85 ui-sans-serif,system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+    a { color:var(--accent); text-decoration-thickness:1px; text-underline-offset:3px; }
+    .wrap { width:min(900px, calc(100% - 40px)); margin:auto; }
+    header { display:flex; justify-content:space-between; align-items:center; padding:25px 0; border-bottom:1px solid var(--line); font-size:14px; }
+    .language { padding:6px 10px; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink); font:inherit; cursor:pointer; }
+    header a { color:var(--ink); text-decoration:none; font-weight:700; }
+    main { padding:58px 0 90px; }
+    article { max-width:760px; margin:auto; }
+    .eyebrow,.meta { color:var(--muted); font-size:13px; }
+    h1 { margin:10px 0 14px; font-size:clamp(36px,7vw,56px); line-height:1.2; letter-spacing:-.04em; }
+    .dek { color:var(--muted); font-size:19px; line-height:1.7; }
+    .toc { margin:32px 0; padding:18px 22px; background:var(--soft); border-radius:10px; }
+    .toc strong { display:block; margin-bottom:6px; }
+    .toc ol { margin:0; padding-left:22px; font-size:15px; }
+    h2 { margin:54px 0 14px; font-size:27px; line-height:1.35; }
+    h3 { margin:30px 0 8px; font-size:20px; }
+    p { margin:16px 0; }
+    ul,ol { padding-left:26px; }
+    li { padding-left:3px; margin:5px 0; }
+    blockquote { margin:24px 0; padding:14px 20px; border-left:3px solid var(--accent); background:var(--soft); }
+    blockquote p { margin:0; }
+    table { width:100%; border-collapse:collapse; margin:20px 0 28px; font-size:14px; line-height:1.65; }
+    th,td { padding:10px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { background:var(--soft); font-weight:650; }
+    .callout { margin:22px 0; padding:16px 20px; border:1px solid var(--line); border-radius:10px; color:#39443e; }
+    .back { display:inline-block; margin-top:46px; font-size:14px; }
+    footer { padding:24px 0 40px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+    @media(max-width:640px){ body{font-size:16px} main{padding-top:40px} table{display:block;overflow-x:auto;white-space:normal} h2{font-size:24px;margin-top:42px} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header><a href="index.html">← Qix · Notes</a><button class="language" id="language" type="button">EN</button></header>
+    <main><article>
+      <p class="eyebrow">语音交互 · 概念梳理</p>
+      <h1>什么是全双工？</h1>
+      <p class="dek">从并发传输到增量决策：全双工不只是“能打断”，更关乎系统如何在信息逐步到达时及时调整表达与行动。</p>
+      <p class="meta">概念笔记 · 基于持续整理的思考稿</p>
+
+      <div class="toc"><strong>本文结构</strong><ol><li><a href="#layers">全双工的四个层次</a></li><li><a href="#signals">语音为什么带来增量决策</a></li><li><a href="#models">现有模型的结构性挑战</a></li><li><a href="#loops">四类反馈闭环</a></li><li><a href="#generation">为什么理解比生成更难</a></li><li><a href="#question">核心科学问题</a></li></ol></div>
+
+      <p>“全双工”常被用来描述系统可以一边听、一边说。但这种说法容易把全双工简化成并发收发，或几种孤立的对话技能。更完整地看，它描述的是一种交互时序：输入、推理、输出和行动可以重叠；系统在生成或执行期间仍持续接收信息，并允许新证据改变当前状态。</p>
+      <p>因此，打断、恢复和 Backchannel（非话轮夺取式的简短反馈）是全双工能力的外显行为，却不是全部。关键在于：新增信息能否及时进入反馈回路，修订系统正在表达的内容、任务状态或外部行动。</p>
+
+      <h2 id="layers">一、全双工的四个层次</h2>
+      <table><thead><tr><th>层次</th><th>定义</th><th>能够说明什么</th></tr></thead><tbody>
+        <tr><td>通信双工</td><td>两个方向能够同时传输数据</td><td>链路支持并发收发</td></tr>
+        <tr><td>模型双工</td><td>模型能够同时处理输入流并生成输出流</td><td>模型可以边听边说</td></tr>
+        <tr><td>交互双工</td><td>输出期间到达的新输入能够改变当前输出</td><td>支持打断、反馈、修正和恢复</td></tr>
+        <tr><td>行动双工</td><td>用户能在任务执行期间补充、修改、取消或接管</td><td>支持持续可控的智能体行动</td></tr>
+      </tbody></table>
+      <p>面向全双工小语言模型（FD-SLM），可以采用下面这个操作性定义：</p>
+      <blockquote><p><strong>全双工语音交互是指：系统在生成或播放输出期间，仍持续接收和解释用户及环境输入，并允许新增证据在有限时延内改变正在进行的表达、任务状态或外部行动。</strong></p></blockquote>
+      <ul><li><strong>Interruption（打断）</strong>意味着控制权发生改变；</li><li><strong>Resume（恢复）</strong>要求系统恢复中断前的状态，并修复必要的语义衔接；</li><li><strong>Backchannel（反馈音）</strong>提供增量确认，但通常不夺取话轮。</li></ul>
+      <div class="callout">早期增量对话研究用 <strong>ADD—REVOKE—COMMIT</strong> 概括状态变化：新信息加入，旧假设可能撤回，稳定信息才提交。这个视角与全双工的核心问题相通；在语音智能体中，还需要把语音生成、工具调用和外部行动纳入同一套状态管理。</div>
+
+      <h2 id="signals">二、语音为什么带来增量决策</h2>
+      <p>轮次式文本交互通常以已提交的消息为单位；语音交互处理的则是持续到达的音频帧、词语和事件。文本请求往往在发送前已经过组织，边界清楚；语音中的意图会逐步显现，结束位置需要预测，部分识别结果也可能被后续的改口、自我修正或上下文推翻。</p>
+      <table><thead><tr><th>维度</th><th>典型轮次式文本交互</th><th>全双工语音交互</th></tr></thead><tbody>
+        <tr><td>基本单位</td><td>已提交的消息</td><td>持续到达的音频帧、词和事件</td></tr>
+        <tr><td>输入边界</td><td>用户显式发送，边界清楚</td><td>需要预测话语何时结束</td></tr>
+        <tr><td>信息状态</td><td>通常作为稳定上下文使用</td><td>部分结果可能扩展或被修订</td></tr>
+        <tr><td>意图形成</td><td>请求通常相对完整</td><td>意图、槽位和态度逐步显现</td></tr>
+        <tr><td>并发关系</td><td>收到消息后生成回复</td><td>听、想、说和行动可以重叠</td></tr>
+        <tr><td>附加线索</td><td>标点、格式、表情和发送者</td><td>韵律、停顿、重音、情绪、说话人及背景声音</td></tr>
+        <tr><td>控制信号</td><td>编辑、撤回、回复和按钮</td><td>停顿、抢话、反馈音、改口、音量和语调</td></tr>
+        <tr><td>输出后果</td><td>消息发出后通常保持不变</td><td>已播出的声音无法收回，只能修复</td></tr>
+      </tbody></table>
+      <p>因此，关键差别不是简单比较文本和语音的“信息密度”，而是看<strong>稳定语义证据到达的速度、边界的不确定性和修订的频率</strong>。这里可以把“决策信息密度”作为一个工作概念：单位时间内可用于提交决策的稳定语义证据。</p>
+      <p>模型需要在“更准确”和“更及时”之间权衡：等待更多证据可以减少误判，但等待过久又会让对话变得迟缓。全双工更像一个在线、部分可观测的闭环决策问题。</p>
+      <div class="callout">典型 LLM 聊天呈现为半双工，通常与其运行协议有关：系统固定当前提示词，生成回复，再等待下一条用户消息。限制来自消息提交边界和推理循环，不宜简单归结为模型规模或语音通道本身。</div>
+
+      <h2 id="models">三、现有模型面临的结构性挑战</h2>
+      <p>传统语言模型主要沿着单一符号序列和固定输入前缀进行自回归生成。全双工交互则同时包含用户语音、系统语音、控制事件和环境反馈等时间流。模型在生成过程中要吸收新输入，也要让新判断传递到回复、计划和行动中。</p>
+      <ol><li><strong>单一序列：</strong>用户输入与系统输出可能同时发生，无法自然排成单一的先后序列。</li><li><strong>上下文冻结：</strong>传统解码通常假设生成期间输入前缀保持不变。</li><li><strong>修订传播：</strong>部分转写、意图或说话人判断改变后，下游计划也需要更新或撤回。</li><li><strong>控制决策缺失：</strong>预测下一个词并不直接回答何时等待、插话、停止或恢复。</li><li><strong>训练数据不足：</strong>普通单轮语料较少包含自然重叠、反馈音、自我修正和中断恢复。</li><li><strong>目标函数不完整：</strong>语言概率高，不代表发言时机恰当，也不代表行动提交安全。</li></ol>
+      <p>相应的系统路线通常需要处理并行语音流与统一时间轴，支持流式编码、增量状态和显式控制，并使用覆盖真实交互行为的数据进行训练与评估。</p>
+
+      <h2 id="loops">四、反馈回路可以拆成四类</h2>
+      <ol><li><strong>感知修订闭环：</strong>新音频可能修订部分转写和意图；修订要传递到回复、计划和任务状态。</li><li><strong>声学闭环：</strong>系统自己的声音会进入麦克风；模型需要区分自身输出、回声和用户插话。</li><li><strong>社会交互闭环：</strong>用户会根据系统的停顿、反馈音和部分回答调整表达，系统行为本身会影响下一步输入。</li><li><strong>行动闭环：</strong>工具或环境动作会改变外部状态；用户可能在动作期间补充、修改、取消或接管。</li></ol>
+      <p>延迟也会构成反馈回路：系统响应过慢，用户可能重复表达；重复内容又可能被识别成新任务；系统重复执行后，用户还要进一步纠正。因此，全双工系统不仅要低延迟，也要关注闭环是否稳定、错误能否被及时纠正。</p>
+
+      <h2 id="generation">五、为什么生成容易一些，理解更困难？</h2>
+      <p>图像到视频、文本到语音等生成任务，通常是在已知条件下构造一个合理的未来；流式理解与交互则要在真实事件尚未结束时判断它正在如何发展，并据此采取可能影响后续的动作。</p>
+      <table><thead><tr><th>维度</th><th>语音／视频生成</th><th>语音／视频理解与交互</th></tr></thead><tbody>
+        <tr><td>条件</td><td>文本或图像通常已经给定</td><td>输入仍在持续到达</td></tr>
+        <tr><td>合法结果</td><td>通常存在多种可接受输出</td><td>需要判断实际发生的事件</td></tr>
+        <tr><td>时间边界</td><td>可以预先规划或缓存</td><td>事件何时开始、结束并不明确</td></tr>
+        <tr><td>修订压力</td><td>未输出部分仍可调整</td><td>先前理解可能被后续证据推翻</td></tr>
+        <tr><td>决策后果</td><td>主要影响生成质量</td><td>可能改变回复、控制权和外部行动</td></tr>
+        <tr><td>反馈关系</td><td>常可一次性生成</td><td>当前输出会影响未来输入</td></tr>
+      </tbody></table>
+      <blockquote><p>开放环生成只需产生一种合理未来；全双工理解必须在真实未来尚未完成时，对它作出及时且可负责的判断。</p></blockquote>
+
+      <h2 id="question">六、核心科学问题</h2>
+      <blockquote><p><strong>在双向连续、可重叠且可修订的信息流中，模型如何基于尚未完整的证据，联合决定何时继续感知、何时反馈、何时表达、何时停止或恢复，以及何时提交或撤回行动，并使语言内容、交互控制与任务状态保持一致？</strong></p></blockquote>
+      <p>从这个角度看，全双工首先描述交互的时序组织方式。语音使问题进一步变成增量决策：系统要在信息未完整时权衡等待和响应，并处理后续修订。随着工具和智能体能力加入，研究对象也扩展到任务所有权、共同状态、控制权和执行协议。用户的新输入可能是普通反馈，也可能是在修改任务、取消行动或收回控制权。</p>
+      <a class="back" href="index.html">← 返回首页</a>
+    </article></main>
+    <footer>© 2026 Qix · 用 Markdown 写作，用 GitHub 保存。</footer>
+  </div>
+<script>
+  document.querySelector('#language').addEventListener('click', () => {
+    localStorage.setItem('blog-language', 'en');
+    location.href = 'full-duplex-en.html';
+  });
+</script>
+</body>
+</html>

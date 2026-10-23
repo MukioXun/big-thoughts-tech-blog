@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="A four-layer view of full-duplex voice interaction and the incremental decision-making it requires." />
+  <title>What Is Full Duplex? From Concurrent Streams to Incremental Decisions — Qix · Notes</title>
+  <style>
+    :root { color-scheme: light; --ink:#202522; --muted:#66716c; --line:#e3e8e3; --accent:#39745a; --paper:#fbfcfa; --soft:#f1f5f0; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:17px/1.85 ui-sans-serif,system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+    a { color:var(--accent); text-decoration-thickness:1px; text-underline-offset:3px; }
+    .wrap { width:min(900px, calc(100% - 40px)); margin:auto; }
+    header { display:flex; justify-content:space-between; align-items:center; padding:25px 0; border-bottom:1px solid var(--line); font-size:14px; }
+    header a { color:var(--ink); text-decoration:none; font-weight:700; }
+    .language { padding:6px 10px; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink); font:inherit; cursor:pointer; }
+    main { padding:58px 0 90px; }
+    article { max-width:760px; margin:auto; }
+    .eyebrow,.meta { color:var(--muted); font-size:13px; }
+    h1 { margin:10px 0 14px; font-size:clamp(36px,7vw,56px); line-height:1.2; letter-spacing:-.04em; }
+    .dek { color:var(--muted); font-size:19px; line-height:1.7; }
+    .toc { margin:32px 0; padding:18px 22px; background:var(--soft); border-radius:10px; }
+    .toc strong { display:block; margin-bottom:6px; }
+    .toc ol { margin:0; padding-left:22px; font-size:15px; }
+    h2 { margin:54px 0 14px; font-size:27px; line-height:1.35; }
+    p { margin:16px 0; }
+    ul,ol { padding-left:26px; }
+    li { padding-left:3px; margin:5px 0; }
+    blockquote { margin:24px 0; padding:14px 20px; border-left:3px solid var(--accent); background:var(--soft); }
+    blockquote p { margin:0; }
+    table { width:100%; border-collapse:collapse; margin:20px 0 28px; font-size:14px; line-height:1.65; }
+    th,td { padding:10px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { background:var(--soft); font-weight:650; }
+    .callout { margin:22px 0; padding:16px 20px; border:1px solid var(--line); border-radius:10px; color:#39443e; }
+    .back { display:inline-block; margin-top:46px; font-size:14px; }
+    footer { padding:24px 0 40px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+    @media(max-width:640px){ body{font-size:16px} main{padding-top:40px} table{display:block;overflow-x:auto} h2{font-size:24px;margin-top:42px} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header><a href="index.html">← Qix · Notes</a><button class="language" id="language" type="button">中文</button></header>
+    <main><article>
+      <p class="eyebrow">VOICE INTERACTION · CONCEPTS</p>
+      <h1>What Is Full Duplex?</h1>
+      <p class="dek">From concurrent streams to incremental decisions: full duplex is not just the ability to interrupt. It is about how a system adapts its speech and actions as information arrives over time.</p>
+      <p class="meta">Concept note · A work in progress</p>
+      <div class="toc"><strong>In this article</strong><ol><li><a href="#layers">Four layers of full duplex</a></li><li><a href="#signals">Why speech calls for incremental decisions</a></li><li><a href="#models">Structural challenges for current models</a></li><li><a href="#loops">Four feedback loops</a></li><li><a href="#generation">Why understanding is harder than generation</a></li><li><a href="#question">A central research question</a></li></ol></div>
+      <p>“Full duplex” is often used to mean that a system can listen and speak at the same time. That description can reduce it to concurrent transmission or a handful of isolated conversational skills. More broadly, full duplex describes the timing of an interaction: input, reasoning, output, and action may overlap. While generating a response or carrying out a task, the system keeps receiving information and can let new evidence change its current state.</p>
+      <p>Interruption, resumption, and backchannels are visible behaviors associated with full-duplex capability, but they are not the whole story. The key question is whether new information can enter the feedback loop in time to revise what the system is saying, the state of the task, or an external action.</p>
+      <h2 id="layers">1. Four layers of full duplex</h2>
+      <table><thead><tr><th>Layer</th><th>Definition</th><th>What it demonstrates</th></tr></thead><tbody>
+        <tr><td>Communication duplex</td><td>Both directions can transmit data simultaneously</td><td>The link supports concurrent sending and receiving</td></tr>
+        <tr><td>Model duplex</td><td>The model processes an input stream while generating an output stream</td><td>The model can listen and speak concurrently</td></tr>
+        <tr><td>Interaction duplex</td><td>New input arriving during output can change that output</td><td>Interruption, feedback, correction, and resumption</td></tr>
+        <tr><td>Action duplex</td><td>The user can add to, modify, cancel, or take over a task in progress</td><td>Ongoing, user-controllable agent actions</td></tr>
+      </tbody></table>
+      <p>For full-duplex small language models (FD-SLMs), we can use the following operational definition:</p>
+      <blockquote><p><strong>Full-duplex voice interaction is an interaction in which the system continues to receive and interpret user and environmental input while generating or playing output, allowing new evidence to change its ongoing utterance, task state, or external action within a bounded delay.</strong></p></blockquote>
+      <ul><li><strong>Interruption</strong> changes who has control of the floor.</li><li><strong>Resumption</strong> restores the relevant prior state and repairs the semantic connection when needed.</li><li>A <strong>backchannel</strong> provides incremental acknowledgment without normally taking the floor.</li></ul>
+      <div class="callout">Incremental dialogue research has described state changes as <strong>ADD—REVOKE—COMMIT</strong>: new information is added, earlier hypotheses may be revoked, and only stable information is committed. The idea maps naturally to full-duplex interaction. For voice agents, speech generation, tool calls, and external actions also need to be governed by this state-management process.</div>
+      <h2 id="signals">2. Why speech calls for incremental decisions</h2>
+      <p>Turn-based text interaction usually treats a submitted message as its basic unit. Voice interaction deals with audio frames, words, and events that keep arriving. A text request often has a clear boundary and has been organized before it is sent. In speech, intent emerges over time, the endpoint must be predicted, and partial recognition results may be revised by a correction, self-repair, or later context.</p>
+      <table><thead><tr><th>Dimension</th><th>Typical turn-based text</th><th>Full-duplex voice</th></tr></thead><tbody>
+        <tr><td>Basic unit</td><td>A submitted message</td><td>Continuously arriving audio frames, words, and events</td></tr>
+        <tr><td>Input boundary</td><td>Explicitly sent, with a clear boundary</td><td>The system must predict when an utterance ends</td></tr>
+        <tr><td>Information state</td><td>Usually treated as stable context</td><td>Partial results can grow or be revised</td></tr>
+        <tr><td>Intent formation</td><td>Requests are relatively complete</td><td>Intent, slots, and stance emerge incrementally</td></tr>
+        <tr><td>Concurrency</td><td>The reply follows the submitted message</td><td>Listening, reasoning, speaking, and acting may overlap</td></tr>
+        <tr><td>Additional cues</td><td>Punctuation, formatting, emoji, and sender</td><td>Prosody, pauses, emphasis, emotion, speaker, and background sounds</td></tr>
+        <tr><td>Control signals</td><td>Edit, retract, reply, and buttons</td><td>Pauses, overlap, backchannels, self-correction, volume, and intonation</td></tr>
+        <tr><td>Output consequence</td><td>A sent message usually remains unchanged</td><td>Spoken audio cannot be taken back; it can only be repaired</td></tr>
+      </tbody></table>
+      <p>The key distinction is not simply the “information density” of text versus speech. It is the <strong>rate at which stable semantic evidence arrives, uncertainty about boundaries, and frequency of revision</strong>. “Decision information density” can serve as a working concept: the amount of stable semantic evidence available for committing a decision per unit of time.</p>
+      <p>A model must balance accuracy and timeliness. Waiting for more evidence can reduce mistakes, but waiting too long makes the interaction sluggish. Full duplex is therefore better viewed as an online, partially observable, closed-loop decision problem.</p>
+      <div class="callout">Typical LLM chat behaves as half duplex largely because of its runtime protocol: the system freezes the current prompt, generates a complete response, then waits for the next user message. The constraint comes from message boundaries and the inference loop; it should not be attributed simply to model size or the audio channel.</div>
+      <h2 id="models">3. Structural challenges for current models</h2>
+      <p>Traditional language models mainly generate one symbolic sequence autoregressively from a fixed input prefix. Full-duplex interaction, by contrast, involves concurrent streams such as user speech, system speech, control events, and environmental feedback. A model must absorb new input while generating, then propagate revised judgments into its response, plan, and actions.</p>
+      <ol><li><strong>A single sequence:</strong> User input and system output may overlap, so they cannot be naturally represented as one simple sequence.</li><li><strong>Frozen context:</strong> Conventional decoding assumes the input prefix remains unchanged during generation.</li><li><strong>Revision propagation:</strong> If a partial transcript, intent, or speaker judgment changes, downstream plans may also need revision or retraction.</li><li><strong>Missing control decisions:</strong> Predicting the next word does not determine when to wait, interrupt, stop, or resume.</li><li><strong>Limited training data:</strong> Ordinary single-turn corpora rarely capture natural overlap, backchannels, self-repair, and interruption recovery.</li><li><strong>Incomplete objectives:</strong> High language likelihood does not guarantee good timing or safe commitment of an action.</li></ol>
+      <p>System designs therefore often need parallel audio streams and a shared timeline, streaming encoders, incremental state, explicit control, and training and evaluation data that capture real interaction behavior.</p>
+      <h2 id="loops">4. Four feedback loops</h2>
+      <ol><li><strong>Perception and revision:</strong> New audio can revise a partial transcript or intent; the change must propagate to the response, plan, and task state.</li><li><strong>Acoustic feedback:</strong> The system’s own voice reaches the microphone, so the model must distinguish its output and echo from a user interruption.</li><li><strong>Social interaction:</strong> Users adjust what they say based on the system’s pauses, backchannels, and partial answers. System behavior becomes part of the cause of the next input.</li><li><strong>Action feedback:</strong> Tools and environmental actions change the world; users may add to, modify, cancel, or take over while an action is underway.</li></ol>
+      <p>Latency also creates a feedback loop. If the system responds too slowly, users may repeat themselves. A repetition can be mistaken for a new task, causing the system to act twice and prompting further correction. Full-duplex systems must therefore consider closed-loop stability and timely error recovery, not latency alone.</p>
+      <h2 id="generation">5. Why is understanding harder than generation?</h2>
+      <p>Tasks such as image-to-video and text-to-speech generation typically construct a plausible future from known conditions. Streaming understanding and interaction must judge what is happening before the real event is complete, then take actions that may affect what happens next.</p>
+      <table><thead><tr><th>Dimension</th><th>Speech/video generation</th><th>Speech/video understanding and interaction</th></tr></thead><tbody>
+        <tr><td>Condition</td><td>Text or image is usually already given</td><td>Input is still arriving</td></tr>
+        <tr><td>Acceptable outcomes</td><td>Many outputs may be valid</td><td>The system must identify what actually happened</td></tr>
+        <tr><td>Temporal boundary</td><td>Can be planned or buffered in advance</td><td>Event onset and offset are uncertain</td></tr>
+        <tr><td>Revision pressure</td><td>Unproduced content can still be adjusted</td><td>Later evidence can overturn an earlier interpretation</td></tr>
+        <tr><td>Decision consequence</td><td>Mainly affects generation quality</td><td>May affect the response, control, and external actions</td></tr>
+        <tr><td>Feedback relation</td><td>Can often be generated in one pass</td><td>Current output can change future input</td></tr>
+      </tbody></table>
+      <blockquote><p>Open-loop generation needs to produce one plausible future. Full-duplex understanding must make timely, accountable judgments before the real future has unfolded.</p></blockquote>
+      <h2 id="question">6. A central research question</h2>
+      <blockquote><p><strong>Given continuous, overlapping, and revisable information streams in both directions, how can a model use incomplete evidence to jointly decide when to keep listening, acknowledge, speak, stop or resume, and commit or retract an action—while keeping language, interaction control, and task state consistent?</strong></p></blockquote>
+      <p>From this perspective, full duplex first describes the temporal organization of interaction. Speech turns it into an incremental decision problem: the system must balance waiting and responding while evidence is incomplete, then handle revisions. With tools and agent capabilities, the problem expands to managing task ownership, shared state, control, and execution protocols. A user’s new input may be ordinary feedback, a task modification, a cancellation, or a reclaiming of control.</p>
+      <a class="back" href="index.html">← Back to home</a>
+    </article></main>
+    <footer>© 2026 Qix · Written in Markdown, kept on GitHub.</footer>
+  </div>
+  <script>
+    document.querySelector('#language').addEventListener('click', () => {
+      localStorage.setItem('blog-language', 'zh');
+      location.href = 'full-duplex.html';
+    });
+  </script>
+</body>
+</html>

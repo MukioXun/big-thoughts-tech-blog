@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="个人博客与项目记录" />
+  <title>Qix 的个人博客</title>
+  <style>
+    :root { color-scheme: light; --ink:#202522; --muted:#66716c; --line:#e3e8e3; --accent:#39745a; --paper:#fbfcfa; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.75 ui-sans-serif,system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+    a { color:inherit; text-decoration:none; }
+    .wrap { width:min(900px, calc(100% - 40px)); margin:auto; }
+    header { display:flex; align-items:center; justify-content:space-between; padding:28px 0; border-bottom:1px solid var(--line); }
+    .language { padding:6px 10px; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink); font:inherit; cursor:pointer; }
+    .brand { font-weight:750; letter-spacing:.02em; }
+    nav { display:flex; gap:24px; color:var(--muted); font-size:14px; }
+    main { padding:78px 0 96px; }
+    .eyebrow { color:var(--accent); font-size:13px; letter-spacing:.12em; text-transform:uppercase; }
+    h1 { max-width:700px; margin:14px 0; font-size:clamp(38px,7vw,64px); line-height:1.16; letter-spacing:-.045em; }
+    .intro { max-width:620px; color:var(--muted); font-size:18px; }
+    .actions { display:flex; gap:12px; margin:28px 0 72px; }
+    .button { padding:10px 16px; border:1px solid var(--line); border-radius:8px; font-size:14px; }
+    .button.primary { background:var(--accent); border-color:var(--accent); color:white; }
+    h2 { margin:0 0 18px; font-size:21px; }
+    .posts { border-top:1px solid var(--line); }
+    .post { display:flex; justify-content:space-between; gap:20px; padding:18px 0; border-bottom:1px solid var(--line); }
+    .post span:last-child { color:var(--muted); font-size:14px; white-space:nowrap; }
+    .note { margin-top:52px; padding:18px 20px; border-left:3px solid var(--accent); background:#f1f5f0; color:var(--muted); font-size:14px; }
+    footer { padding:24px 0 40px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+    @media(max-width:560px){ header{align-items:flex-start;gap:16px;flex-direction:column} nav{gap:18px} main{padding-top:54px}.post{flex-direction:column;gap:2px} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="index.html">Qix · Notes</a>
+      <nav><a href="#posts" data-zh="文章" data-en="Writing">文章</a><a href="#about" data-zh="关于" data-en="About">关于</a><a href="https://github.com/MukioXun">GitHub ↗</a><button class="language" id="language" type="button">EN</button></nav>
+    </header>
+    <main>
+      <p class="eyebrow" data-zh="个人博客 · 持续更新" data-en="PERSONAL BLOG · NOTES IN PROGRESS">个人博客 · 持续更新</p>
+      <h1 data-zh="记录正在学习、<br />构建与思考的事。" data-en="Notes on what I’m<br />learning and building.">记录正在学习、<br />构建与思考的事。</h1>
+      <p class="intro" data-zh="这里放技术笔记、研究记录和项目复盘。整理已有资料，也记录新的想法。" data-en="A place for technical notes, research, and project reflections—organizing existing work and capturing new ideas.">这里放技术笔记、研究记录和项目复盘。整理已有资料，也记录新的想法。</p>
+      <div class="actions"><a class="button primary" href="#posts" data-zh="阅读文章" data-en="Read the blog">阅读文章</a><a class="button" href="https://github.com/MukioXun" data-zh="查看 GitHub" data-en="View GitHub">查看 GitHub</a></div>
+      <section id="posts">
+        <h2 data-zh="最近文章" data-en="Recent writing">最近文章</h2>
+        <div class="posts">
+          <a class="post" href="full-duplex.html" data-href-zh="full-duplex.html" data-href-en="full-duplex-en.html"><span data-zh="什么是全双工？从并发传输到增量决策" data-en="What Is Full Duplex? From Concurrent Streams to Incremental Decisions">什么是全双工？从并发传输到增量决策</span><span data-zh="语音交互 · 概念梳理" data-en="Voice Interaction · Concepts">语音交互 · 概念梳理</span></a>
+        </div>
+      </section>
+      <section id="about" class="note" data-zh="关于：Qix 的个人技术博客，记录语音交互、研究与工程实践。" data-en="About: Qix’s personal blog on voice interaction, research, and engineering.">关于：Qix 的个人技术博客，记录语音交互、研究与工程实践。</section>
+    </main>
+    <footer data-zh="© 2026 Qix · 用 Markdown 写作，用 GitHub 保存。" data-en="© 2026 Qix · Written in Markdown, kept on GitHub.">© 2026 Qix · 用 Markdown 写作，用 GitHub 保存。</footer>
+  </div>
+<script>
+  const languageButton = document.querySelector('#language');
+  function setLanguage(language) {
+    document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
+    document.querySelectorAll('[data-zh][data-en]').forEach((node) => {
+      node.innerHTML = node.dataset[language === 'en' ? 'en' : 'zh'];
+    });
+    document.querySelectorAll('[data-href-zh][data-href-en]').forEach((node) => {
+      node.href = node.dataset[language === 'en' ? 'hrefEn' : 'hrefZh'];
+    });
+    languageButton.textContent = language === 'en' ? '中文' : 'EN';
+    localStorage.setItem('blog-language', language);
+  }
+  languageButton.addEventListener('click', () => setLanguage(languageButton.textContent === 'EN' ? 'en' : 'zh'));
+  setLanguage(localStorage.getItem('blog-language') || 'zh');
+</script>
+</body>
+</html>
