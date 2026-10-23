@@ -1,17 +1,29 @@
-# 个人博客快速启动
+# Qix · Notes
 
-当前博客是零依赖静态站点，包含中英双语首页和全双工概念文章。页头的语言按钮会记住选择，并在首页及文章页间保持一致。
+A bilingual personal blog about voice interaction, research, and engineering.
+
+## Preview locally
+
+No build tools or dependencies are required. Run a local static server from the project directory:
 
 ```sh
 python3 -m http.server 8000
 ```
 
-然后访问 http://localhost:8000。
+Then open <http://localhost:8000>.
 
-## 发布
+## Pages
 
-把站点文件推送到 GitHub 仓库，在仓库的 **Settings → Pages** 中选择从分支部署。若仓库名不是 `<用户名>.github.io`，可把 Pages 的项目路径设置为 `/仓库名/`；当前页面之间使用相对链接，可支持项目站点路径。
+- `index.html` — bilingual home page
+- `full-duplex.html` — Chinese article: “What Is Full Duplex?”
+- `full-duplex-en.html` — English edition
 
-## 复用 GitHub 内容
+Use the language switch in the header to change languages. The selected language is saved in the browser.
 
-从仓库挑选适合公开的 Markdown 文档，整理标题、摘要、日期和分类后发布为文章。项目 README 和研究草稿通常需要面向博客读者编辑，不建议整仓库原样搬运。
+## Deployment
+
+This is a static site and can be hosted with GitHub Pages. In the repository settings, enable **Pages** and deploy from the `main` branch. The site uses relative page links, so it also works as a project site under a repository path.
+
+## License
+
+Content and code in this repository are provided for personal reading. Please contact the author before republishing the articles.
